@@ -11,6 +11,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(TARGET1 c_ipher)
 set(TARGET1_MAIN cipher_run)
 
+set(TARGET2 c_ipher_tests)
+set(TARGET2_MAIN cipher_test)
+
 set(INC_DIR inc)
 set(SRC_DIR src)
 
@@ -29,3 +32,6 @@ list(TRANSFORM SRC APPEND  ${SRC_EXT})
 
 add_executable(${TARGET1} ${SRC_DIR}/${TARGET1_MAIN}${SRC_EXT} ${INC} ${SRC})
 target_include_directories(${TARGET1} PRIVATE ${INC_DIR})
+
+add_executable(${TARGET2} ${SRC_DIR}/${TARGET2_MAIN}${SRC_EXT} ${INC} ${SRC})
+target_include_directories(${TARGET2} PRIVATE ${INC_DIR})

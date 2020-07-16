@@ -4,18 +4,18 @@
 #include "ciphers.h"
 
 int usage() {
-    printf("usage: ./c_ipher --[cipher_name] -[e/d] [\"message\"] OR ./c_ipher --help\n");
-    return 1;
+    printf("usage: ./c_ipher --[cipher_name] -[e/d] ['message'] OR ./c_ipher --help\n");
+    return EXIT_FAILURE;
 }
 
 int help() {
     usage();
     printf("\t1) the relative path to the executable may be different\n");
     printf("\t2) -e --> encrypt message, -d --> decrypt message\n");
-    printf("\t3) put your message in quotes; escape quotes that are part of the message\n");
+    printf("\t3) put your message in single quotes; some characters may need to be escaped\n");
     printf("available ciphers:\n");
     printf("\t--atbash\n");
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int main(int argc, char** argv) {
@@ -39,5 +39,5 @@ int main(int argc, char** argv) {
     }
 
     free(ciphertext);
-    return 0;
+    return EXIT_SUCCESS;
 }
