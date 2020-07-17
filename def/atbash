@@ -1,6 +1,12 @@
+#START_TEST
 #MAX_LEN
-50
+100
 #PT
 Testing the tests!
 #CT
 Gvhgrmt gsv gvhgh!
+#PT
+1234567890-=qwertyuiop[]\asdfghjkl;'zxcvbnm,./!@#$%^&*()_+ASDFGHJKL:"ZXCVBNM<>?
+#CT
+1234567890-=jdvigbfrlk[]\zhwutsqpo;'acxeymn,./!@#$%^&*()_+ZHWUTSQPO:"ACXEYMN<>?
+#END_TEST
