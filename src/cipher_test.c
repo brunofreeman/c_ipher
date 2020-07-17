@@ -9,17 +9,6 @@
 #define PT_ID "#PT\n"
 #define CT_ID "#CT\n"
 
-/*ssize_t read_line(char* line_buf, size_t* line_buf_size, FILE* file) {
-    ssize_t line_size;
-    line_size = getline(&line_buf, line_buf_size, file);
-    if (line_size > 0 && line_buf[line_size - 1] == '\n') {
-        line_buf[line_size - 1] = '\0';
-        return line_size - 1;
-    } else {
-        return EOF;
-    }
-}*/
-
 /*
  * Reads the test's max string length.
  * @return 0 on a failure, the designated max_len otherwise
@@ -99,7 +88,6 @@ int main(int argc, char** argv) {
 
     free(plaintext);
     free(ciphertext);
-
 
     return read_mode == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
