@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
                 strncpy(ciphertext, line_buf, line_size - 1);
                 printf("%20s: %s\n", "Plaintext", plaintext);
                 printf("%20s: %s\n", "Correct ciphertext", ciphertext);
-                char* generated_ct = atbash(plaintext);
+                char* generated_ct = atbash_encrypt(plaintext);
                 printf("%20s: %s\n", "Generated ciphertext", generated_ct);
                 free(generated_ct);
                 memset(&plaintext[0], '\0', sizeof(plaintext));
