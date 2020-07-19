@@ -1,0 +1,7 @@
+TODO: allow for chaining ciphers
+TODO: allow reading/writing plain/ciphertext from/to files
+TODO: add flag(s) for cleaning input
+        * strip non-alpha characters
+        * strip non-alphanumeric characters
+        * convert to upper/lowercase
+        * etc.
