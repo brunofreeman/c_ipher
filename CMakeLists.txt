@@ -20,7 +20,7 @@ set(SRC_DIR src)
 set(SRC_EXT .c)
 set(INC_EXT .h)
 
-list(APPEND FILES ciphers)
+list(APPEND FILES ciphers cipher_util)
 
 set(INC ${FILES})
 list(TRANSFORM INC PREPEND ${INC_DIR}/)
