@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "ciphers.h"
+#include "cipher_util.h"
 
 int usage() {
     printf("usage: ./c_ipher --[cipher_name] -[e/d] ('key/shift/etc') ['message'] OR ./c_ipher --help\n");
@@ -13,9 +14,11 @@ int help() {
     printf("\t1) the relative path to the executable may be different\n");
     printf("\t2) -e --> encrypt message, -d --> decrypt message\n");
     printf("\t3) put your message in single quotes; some characters may need to be escaped\n");
+    printf("\t4) keys should consist of only uppercase letters\n");
     printf("available ciphers:\n");
     printf("\t--atbash\n");
     printf("\t--caesar\n");
+    printf("\t--vigenere\n");
     return EXIT_SUCCESS;
 }
 
@@ -45,6 +48,17 @@ int main(int argc, char** argv) {
             text = caesar_encrypt(argv[4], shift);
         } else if (strcmp(argv[2], "-d") == 0) {
             text = caesar_decrypt(argv[4], shift);
+        } else return usage();
+
+    } else if (strcmp(argv[1], "--vigenere") == 0) {
+        if (argc != 5) return usage();
+
+        if (!only_upper_alpha(argv[3])) return usage();
+
+        if (strcmp(argv[2], "-e") == 0) {
+            text = vigenere_encrypt(argv[4], argv[3]);
+        } else if (strcmp(argv[2], "-d") == 0) {
+            text = vigenere_decrypt(argv[4], argv[3]);
         } else return usage();
 
     } else return usage();
