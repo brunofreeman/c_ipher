@@ -5,12 +5,35 @@
 
 #define ALPHABET_LEN 26
 
-int mod(int dividend, int divisor) {
+/*
+ * @param dividend the number to take the
+ *        modulus of
+ * @param divisor the modulus
+ */
+static int mod(const int dividend, const int divisor) {
     return ((dividend % divisor) + divisor) % divisor;
 }
 
-int alpha_mod(int dividend) {
+/*
+ * @param dividend the number to take the
+ *        modulus of at mod 26, the alphabet
+ *        length
+ */
+static int alpha_mod(const int dividend) {
     return mod(dividend, ALPHABET_LEN);
+}
+
+/*
+ * @param num the number to find the
+ *        modular multiplicative inverse of,
+ *        mod 26, the alphabet length
+ * @contract num must be coprime with the
+ *           alphabet length, 26
+ */
+static int alpha_mod_inverse(const int num) {
+    int inverse = 0;
+    while (alpha_mod(++inverse * num) != 1);
+    return inverse;
 }
 
 char* atbash_encrypt(const char* plaintext) {
@@ -87,5 +110,39 @@ char* vigenere_decrypt(const char* ciphertext, const char* key) {
     char* plaintext = vigenere_encrypt(ciphertext, anti_key);
 
     free(anti_key);
+    return plaintext;
+}
+
+char* affine_encrypt(const char* plaintext, const int step, const int shift) {
+    size_t len = strlen(plaintext);
+    char* ciphertext = malloc((len + 1) * sizeof(char));
+
+    for (size_t i = 0; i < len; i++) {
+        bool upper = 'A' <= plaintext[i] && plaintext[i] <= 'Z';
+        bool lower = 'a' <= plaintext[i] && plaintext[i] <= 'z';
+        ciphertext[i] = (upper) * (alpha_mod((plaintext[i] - 'A') * step + shift) + 'A') +
+                        (lower) * (alpha_mod((plaintext[i] - 'a') * step + shift) + 'a') +
+                        (!upper && !lower) * plaintext[i];
+    }
+
+    ciphertext[len] = '\0';
+    return ciphertext;
+}
+
+char* affine_decrypt(const char* ciphertext, const int step, const int shift) {
+    size_t len = strlen(ciphertext);
+    char* plaintext = malloc((len + 1) * sizeof(char));
+
+    int mod_inverse = alpha_mod_inverse(step);
+
+    for (size_t i = 0; i < len; i++) {
+        bool upper = 'A' <= ciphertext[i] && ciphertext[i] <= 'Z';
+        bool lower = 'a' <= ciphertext[i] && ciphertext[i] <= 'z';
+        plaintext[i] = (upper) * (alpha_mod(mod_inverse * (ciphertext[i] - 'A' - shift)) + 'A') +
+                       (lower) * (alpha_mod(mod_inverse * (ciphertext[i] - 'a' - shift)) + 'a') +
+                       (!upper && !lower) * ciphertext[i];
+    }
+
+    plaintext[len] = '\0';
     return plaintext;
 }

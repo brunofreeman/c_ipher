@@ -5,3 +5,5 @@ TODO: add flag(s) for cleaning input
         * strip non-alphanumeric characters
         * convert to upper/lowercase
         * etc.
+TODO: --help for each cipher with more detail
+TODO: finish implementing testing framework

@@ -2,23 +2,28 @@
 #include <stdio.h>
 #include <string.h>
 #include "ciphers.h"
-#include "cipher_util.h"
+#include "validate.h"
+
+void print_cipher_help(const char* name, const char* extra_args) {
+    printf("\t--%s\n\t\t* %s\n", name, extra_args);
+}
 
 int usage() {
-    printf("usage: ./c_ipher --[cipher_name] -[e/d] ('key/shift/etc') ['message'] OR ./c_ipher --help\n");
+    printf("usage: ./c_ipher --[cipher_name] -[e/d] (extra arguments) ['message'] OR ./c_ipher --help\n");
     return EXIT_FAILURE;
 }
 
 int help() {
     usage();
     printf("\t1) the relative path to the executable may be different\n");
-    printf("\t2) -e --> encrypt message, -d --> decrypt message\n");
+    printf("\t2) -e --> encrypt, -d --> decrypt\n");
     printf("\t3) put your message in single quotes; some characters may need to be escaped\n");
     printf("\t4) keys should consist of only uppercase letters\n");
-    printf("available ciphers:\n");
-    printf("\t--atbash\n");
-    printf("\t--caesar\n");
-    printf("\t--vigenere\n");
+    printf("available ciphers and their required extra arguments:\n");
+    print_cipher_help("atbash", "N/A");
+    print_cipher_help("caesar", "shift");
+    print_cipher_help("vigenere", "key");
+    print_cipher_help("affine", "step shift");
     return EXIT_SUCCESS;
 }
 
@@ -53,12 +58,27 @@ int main(int argc, char** argv) {
     } else if (strcmp(argv[1], "--vigenere") == 0) {
         if (argc != 5) return usage();
 
-        if (!only_upper_alpha(argv[3])) return usage();
+        if (!is_only_upper_alpha(argv[3])) return usage();
 
         if (strcmp(argv[2], "-e") == 0) {
             text = vigenere_encrypt(argv[4], argv[3]);
         } else if (strcmp(argv[2], "-d") == 0) {
             text = vigenere_decrypt(argv[4], argv[3]);
+        } else return usage();
+
+    } else if (strcmp(argv[1], "--affine") == 0) {
+        if (argc != 6) return usage();
+
+        int step = (int) strtol(argv[3], NULL, 10);
+        if ((argv[3][0] != '0' && step == 0) || !are_coprime(step, 26)) return usage();
+
+        int shift = (int) strtol(argv[4], NULL, 10);
+        if (argv[4][0] != '0' && shift == 0) return usage();
+
+        if (strcmp(argv[2], "-e") == 0) {
+            text = affine_encrypt(argv[5], step, shift);
+        } else if (strcmp(argv[2], "-d") == 0) {
+            text = affine_decrypt(argv[5], step, shift);
         } else return usage();
 
     } else return usage();
