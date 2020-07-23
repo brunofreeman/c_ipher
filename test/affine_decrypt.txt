@@ -1,0 +1,6 @@
+#cipher=affine
+#mode=decrypt
+#max_len=500
+#num_args=2
+#max_arg_len=10
+???<step><shift>
