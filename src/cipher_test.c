@@ -38,6 +38,9 @@
 #define MAX_TOKEN_LEN 14
 
 #define ARGS_TOKEN "???"
+#define ARGS_TOKEN_LEN 3
+#define ARGS_LEFT_DELIM '<'
+#define ARGS_RIGHT_DELIM '>'
 
 enum read_mode_e {
     ENTRY_INFO = 0,
@@ -91,7 +94,7 @@ bool starts_with(const char* text, const char* start);
 
 test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size);
 
-case_info_t parse_entry_info(char* line_buf, size_t num_args);
+case_info_t parse_entry_info(char* line_buf, size_t num_args, size_t max_arg_len);
 
 entry_t read_input_output(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size, bool input);
 
@@ -145,7 +148,7 @@ int main(int argc, char** argv) {
                 if (line_size == EOF) {
                     reading = false;
                 } else {
-                    entry_info = parse_entry_info(line_buf, test_info.num_args);
+                    entry_info = parse_entry_info(line_buf, test_info.num_args, test_info.max_arg_len);
                     if (!entry_info.success) {
                         read_mode = FAILURE;
                         reading = false;
@@ -197,15 +200,6 @@ int main(int argc, char** argv) {
 
     return EXIT_SUCCESS;
 }
-
-/*typedef struct {
-    enum cipher_e cipher;
-    enum direction_e cipher_direction;
-    size_t max_text_len;
-    size_t num_args;
-    size_t max_arg_len;
-    bool success;
-} test_info_t;*/
 
 bool starts_with(const char* text, const char* start) {
     size_t idx = 0;
@@ -295,11 +289,63 @@ test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ss
     test_info.num_args = args[1];
     test_info.max_arg_len = args[2];
 
+    test_info.success = true;
     return test_info;
 }
 
-case_info_t parse_entry_info(char* line_buf, size_t num_args) {
+case_info_t parse_entry_info(char* line_buf, size_t num_args, size_t max_arg_len) {
+    case_info_t case_info;
+    if (!starts_with(line_buf, ARGS_TOKEN)) {
+        case_info.success = false;
+        return case_info;
+    }
+    char** args = malloc(num_args * sizeof(char*));
+    for (size_t i = 0; i < num_args; i++) {
+        args[i] = malloc(max_arg_len * sizeof(char));
+    }
+    size_t line_buf_idx = 2;
+    char prev_delim = ' ';
+    size_t args_idx = 0;
+    size_t arg_text_idx = 0;
+    while (line_buf[++line_buf_idx]) {
+        char c = line_buf[line_buf_idx];
+        if (prev_delim == ' ') {
+            if (c == ARGS_LEFT_DELIM) {
+                prev_delim = ARGS_RIGHT_DELIM;
+                continue;
+            } else {
+                case_info.success = false;
+                return case_info;
+            }
+        }
+        switch (c) {
+            case ARGS_LEFT_DELIM:
+                if (prev_delim == ARGS_RIGHT_DELIM) {
+                    prev_delim = ARGS_LEFT_DELIM;
+                } else {
+                    case_info.success = false;
+                    return case_info;
+                }
+                prev_delim = ARGS_LEFT_DELIM;
+                break;
+            case ARGS_RIGHT_DELIM:
+                if (prev_delim == ARGS_LEFT_DELIM) {
+                    prev_delim = ARGS_RIGHT_DELIM;
+                    args_idx++;
+                } else {
+                    case_info.success = false;
+                    return case_info;
+                }
+                break;
+            default:
+                args[args_idx][arg_text_idx++] = c;
+        }
+    }
 
+    case_info.info = args;
+
+    case_info.success = true;
+    return case_info;
 }
 
 entry_t read_input_output(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size, bool input) {
