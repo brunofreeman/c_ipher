@@ -100,7 +100,9 @@ char* vigenere_encrypt(const char* plaintext, const char* key) {
 
 char* vigenere_decrypt(const char* ciphertext, const char* key) {
     size_t key_len = strlen(key);
-    char* anti_key = malloc((key_len + 1) * sizeof(char));
+
+    char anti_key[key_len + 1];
+    anti_key[key_len] = '\0';
 
     for (size_t i = 0; i < key_len; i++) {
         anti_key[i] = (key[i] == 'A') * 'A' +
@@ -109,7 +111,6 @@ char* vigenere_decrypt(const char* ciphertext, const char* key) {
 
     char* plaintext = vigenere_encrypt(ciphertext, anti_key);
 
-    free(anti_key);
     return plaintext;
 }
 
