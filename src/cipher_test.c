@@ -42,6 +42,9 @@
 #define ARGS_LEFT_DELIM '<'
 #define ARGS_RIGHT_DELIM '>'
 
+#define IN_TO_OUT_TOKEN "//--->"
+#define IN_TO_OUT_TOKEN_LEN 6
+
 enum read_mode_e {
     ENTRY_INFO = 0,
     INPUT      = 1,
@@ -80,9 +83,6 @@ typedef struct {
 typedef struct {
     enum cipher_e cipher;
     enum direction_e direction;
-    size_t max_text_len;
-    size_t num_args;
-    size_t max_arg_len;
     bool success;
 } test_info_t;
 
@@ -94,11 +94,11 @@ bool starts_with(const char* text, const char* start);
 
 test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size);
 
-case_info_t parse_entry_info(char* line_buf, size_t num_args, size_t max_arg_len);
+case_info_t parse_case_info(char* line_buf/*, size_t num_args, size_t max_arg_len*/);
 
-entry_t read_input_output(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size, bool input);
+entry_t read_input_output(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size/*, size_t max_size*/, bool input);
 
-test_result_t conduct_test(char* input, char* output, enum cipher_e cipher, enum direction_e direction);
+test_result_t conduct_test(char* input, char* output, enum cipher_e cipher, enum direction_e direction, char** args);
 
 void print_test_result(size_t count, size_t passed, enum cipher_e cipher, enum direction_e direction);
 
@@ -128,12 +128,12 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
 
-        char*  input = malloc((test_info.max_text_len + 1) * sizeof(char));
-        char* output = malloc((test_info.max_text_len + 1) * sizeof(char));
+        // char*  input = malloc((test_info.max_text_len + 1) * sizeof(char));
+        // char* output = malloc((test_info.max_text_len + 1) * sizeof(char));
 
         enum read_mode_e read_mode = ENTRY_INFO;
 
-        case_info_t entry_info;
+        case_info_t case_info;
         entry_t input_read;
         entry_t output_read;
 
@@ -148,8 +148,8 @@ int main(int argc, char** argv) {
                 if (line_size == EOF) {
                     reading = false;
                 } else {
-                    entry_info = parse_entry_info(line_buf, test_info.num_args, test_info.max_arg_len);
-                    if (!entry_info.success) {
+                    case_info = parse_case_info(line_buf/*, test_info.num_args, test_info.max_arg_len*/);
+                    if (!case_info.success) {
                         read_mode = FAILURE;
                         reading = false;
                     } else {
@@ -172,7 +172,13 @@ int main(int argc, char** argv) {
                     read_mode = FAILURE;
                     reading = false;
                 } else {
-                    test_result_t test_result = conduct_test(input, output, test_info.cipher, test_info.direction);
+                    test_result_t test_result =
+                            conduct_test(
+                                    input_read.entry,
+                                    output_read.entry,
+                                    test_info.cipher,
+                                    test_info.direction,
+                                    case_info.info);
                     test_count++;
                     if (test_result.passed) {
                         tests_passed++;
@@ -181,6 +187,7 @@ int main(int argc, char** argv) {
                         printf("Case failed!\n");
                     }
                     read_mode = ENTRY_INFO;
+                    // TODO: free stuff
                 }
                 break;
             } default: {
@@ -191,8 +198,8 @@ int main(int argc, char** argv) {
 
         fclose(file);
         free(line_buf);
-        free(input);
-        free(output);
+        // free(input);
+        // free(output);
 
         if (read_mode == FAILURE) return EXIT_FAILURE;
         else print_test_result(test_count, tests_passed, test_info.cipher, test_info.direction);
@@ -212,6 +219,7 @@ bool starts_with(const char* text, const char* start) {
 
 test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size) {
     test_info_t test_info;
+    test_info.success = false;
 
     *line_size = getline(&line_buf, line_buf_size, file);
 
@@ -230,7 +238,6 @@ test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ss
         }
     }
     if (cipher_code == -1) {
-        test_info.success = false;
         return test_info;
     } else {
         test_info.cipher = (enum cipher_e) cipher_code;
@@ -253,13 +260,12 @@ test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ss
         }
     }
     if (direction_code == -1) {
-        test_info.success = false;
         return test_info;
     } else {
         test_info.direction = (enum direction_e) direction_code;
     }
 
-    size_t args[3];
+    /*size_t args[3];
     size_t lens[3] = {
             MAX_TEXT_LEN_TOKEN_LEN, NUM_ARGS_TOKEN_LEN, MAX_ARG_LEN_TOKEN_LEN
     };
@@ -287,43 +293,90 @@ test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ss
 
     test_info.max_text_len = args[0];
     test_info.num_args = args[1];
-    test_info.max_arg_len = args[2];
+    test_info.max_arg_len = args[2];*/
 
     test_info.success = true;
     return test_info;
 }
 
-case_info_t parse_entry_info(char* line_buf, size_t num_args, size_t max_arg_len) {
+case_info_t parse_case_info(char* line_buf/*, size_t num_args, size_t max_arg_len*/) {
     case_info_t case_info;
+    case_info.success = false;
+
     if (!starts_with(line_buf, ARGS_TOKEN)) {
-        case_info.success = false;
         return case_info;
     }
+
+    char prev_delim = ARGS_RIGHT_DELIM;
+    size_t line_idx = ARGS_TOKEN_LEN;
+    size_t num_args = 0;
+
+    while (line_buf[line_idx]) {
+        char other_delim = prev_delim == ARGS_RIGHT_DELIM ? ARGS_LEFT_DELIM : ARGS_RIGHT_DELIM;
+        if (line_buf[line_idx] == other_delim) {
+            prev_delim = other_delim;
+            if (prev_delim == ARGS_RIGHT_DELIM) num_args++;
+        } else if (line_buf[line_idx] == prev_delim) {
+            return case_info;
+        }
+        line_idx++;
+    }
+
+    size_t arg_lens[num_args];
+    for (size_t i = 0; i < num_args; i++) arg_lens[i] = 0;
+    size_t arg_lens_idx = 0;
+    line_idx = ARGS_TOKEN_LEN;
+
+    while (line_buf[line_idx]) {
+        char other_delim = prev_delim == ARGS_RIGHT_DELIM ? ARGS_LEFT_DELIM : ARGS_RIGHT_DELIM;
+        if (line_buf[line_idx] == other_delim) {
+            prev_delim = other_delim;
+            if (prev_delim == ARGS_RIGHT_DELIM) arg_lens_idx++;
+        } else if (line_buf[line_idx] == prev_delim) {
+            return case_info;
+        } else {
+            arg_lens[arg_lens_idx]++;
+        }
+        line_idx++;
+    }
+
     char** args = malloc(num_args * sizeof(char*));
     for (size_t i = 0; i < num_args; i++) {
-        args[i] = malloc(max_arg_len * sizeof(char));
+        args[i] = malloc(arg_lens[i] * sizeof(char));
     }
-    size_t line_buf_idx = 2;
-    char prev_delim = ' ';
+
+    size_t line_buf_idx = ARGS_TOKEN_LEN;
     size_t args_idx = 0;
     size_t arg_text_idx = 0;
-    while (line_buf[++line_buf_idx]) {
-        char c = line_buf[line_buf_idx];
-        if (prev_delim == ' ') {
+
+    while (line_buf[line_buf_idx]) {
+        /*if (prev_delim == ' ') {
             if (c == ARGS_LEFT_DELIM) {
                 prev_delim = ARGS_RIGHT_DELIM;
                 continue;
             } else {
-                case_info.success = false;
                 return case_info;
             }
+        }*/
+        char other_delim = prev_delim == ARGS_RIGHT_DELIM ? ARGS_LEFT_DELIM : ARGS_RIGHT_DELIM;
+
+        if (line_buf[line_buf_idx] == other_delim) {
+            prev_delim = other_delim;
+            if (prev_delim == ARGS_RIGHT_DELIM) {
+                args_idx++;
+                arg_text_idx = 0;
+            }
+        } else if (line_buf[line_buf_idx] == prev_delim) {
+            return case_info;
+        } else {
+            args[args_idx][arg_text_idx++] = line_buf[line_buf_idx];
         }
-        switch (c) {
+
+        /*switch (c) {
             case ARGS_LEFT_DELIM:
                 if (prev_delim == ARGS_RIGHT_DELIM) {
                     prev_delim = ARGS_LEFT_DELIM;
                 } else {
-                    case_info.success = false;
                     return case_info;
                 }
                 prev_delim = ARGS_LEFT_DELIM;
@@ -333,13 +386,12 @@ case_info_t parse_entry_info(char* line_buf, size_t num_args, size_t max_arg_len
                     prev_delim = ARGS_RIGHT_DELIM;
                     args_idx++;
                 } else {
-                    case_info.success = false;
                     return case_info;
                 }
                 break;
             default:
                 args[args_idx][arg_text_idx++] = c;
-        }
+        }*/
     }
 
     case_info.info = args;
@@ -348,11 +400,11 @@ case_info_t parse_entry_info(char* line_buf, size_t num_args, size_t max_arg_len
     return case_info;
 }
 
-entry_t read_input_output(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size, bool input) {
+entry_t read_input_output(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size/*, size_t max_size*/, bool input) {
 
 }
 
-test_result_t conduct_test(char* input, char* output, enum cipher_e cipher, enum direction_e direction) {
+test_result_t conduct_test(char* input, char* output, enum cipher_e cipher, enum direction_e direction, char** args) {
 
 }
 
