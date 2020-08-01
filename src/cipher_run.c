@@ -34,7 +34,22 @@ int main(int argc, char** argv) {
 
     char* text;
 
-    if (strcmp(argv[1], "--atbash") == 0) {
+    if (strcmp(argv[1], "--affine") == 0) {
+        if (argc != 6) return usage();
+
+        int step = (int) strtol(argv[3], NULL, 10);
+        if ((argv[3][0] != '0' && step == 0) || !are_coprime(step, 26)) return usage();
+
+        int shift = (int) strtol(argv[4], NULL, 10);
+        if (argv[4][0] != '0' && shift == 0) return usage();
+
+        if (strcmp(argv[2], "-e") == 0) {
+            text = affine_encrypt(argv[5], step, shift);
+        } else if (strcmp(argv[2], "-d") == 0) {
+            text = affine_decrypt(argv[5], step, shift);
+        } else return usage();
+
+    } else if (strcmp(argv[1], "--atbash") == 0) {
         if (argc != 4) return usage();
 
         if (strcmp(argv[2], "-e") == 0) {
@@ -64,21 +79,6 @@ int main(int argc, char** argv) {
             text = vigenere_encrypt(argv[4], argv[3]);
         } else if (strcmp(argv[2], "-d") == 0) {
             text = vigenere_decrypt(argv[4], argv[3]);
-        } else return usage();
-
-    } else if (strcmp(argv[1], "--affine") == 0) {
-        if (argc != 6) return usage();
-
-        int step = (int) strtol(argv[3], NULL, 10);
-        if ((argv[3][0] != '0' && step == 0) || !are_coprime(step, 26)) return usage();
-
-        int shift = (int) strtol(argv[4], NULL, 10);
-        if (argv[4][0] != '0' && shift == 0) return usage();
-
-        if (strcmp(argv[2], "-e") == 0) {
-            text = affine_encrypt(argv[5], step, shift);
-        } else if (strcmp(argv[2], "-d") == 0) {
-            text = affine_decrypt(argv[5], step, shift);
         } else return usage();
 
     } else return usage();

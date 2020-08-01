@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "ciphers.h"
+#include "validate.h"
 
 #define NUM_TESTS 8
 #define TEST_NAME_LEN 17
@@ -42,8 +43,8 @@
 #define ARGS_LEFT_DELIM '<'
 #define ARGS_RIGHT_DELIM '>'
 
-#define IN_TO_OUT_TOKEN "//--->"
-#define IN_TO_OUT_TOKEN_LEN 6
+#define IN_TO_OUT_TOKEN "//--->\n"
+#define IN_TO_OUT_TOKEN_LEN 7
 
 enum read_mode_e {
     ENTRY_INFO = 0,
@@ -68,7 +69,8 @@ enum direction_e {
  * @member info needs to be freed
  */
 typedef struct {
-    char** info;
+    char** args;
+    size_t num_args;
     bool success;
 } case_info_t;
 
@@ -88,6 +90,7 @@ typedef struct {
 
 typedef struct {
     bool passed;
+    bool success;
 } test_result_t;
 
 bool starts_with(const char* text, const char* start);
@@ -98,7 +101,7 @@ case_info_t parse_case_info(char* line_buf/*, size_t num_args, size_t max_arg_le
 
 entry_t read_input_output(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size/*, size_t max_size*/, bool input);
 
-test_result_t conduct_test(char* input, char* output, enum cipher_e cipher, enum direction_e direction, char** args);
+test_result_t conduct_test(char* input, char* output, enum cipher_e cipher, enum direction_e direction, char** args, size_t num_args);
 
 void print_test_result(size_t count, size_t passed, enum cipher_e cipher, enum direction_e direction);
 
@@ -160,6 +163,10 @@ int main(int argc, char** argv) {
             } case INPUT: {
                 input_read = read_input_output(line_buf, &line_buf_size, file, &line_size, true);
                 if (!input_read.success) {
+                    for (size_t j = 0; j < case_info.num_args; j++) {
+                        free(case_info.args[j]);
+                    }
+                    free(case_info.args);
                     read_mode = FAILURE;
                     reading = false;
                 } else {
@@ -169,6 +176,11 @@ int main(int argc, char** argv) {
             } case OUTPUT: {
                 output_read = read_input_output(line_buf, &line_buf_size, file, &line_size, true);
                 if (!output_read.success) {
+                    for (size_t j = 0; j < case_info.num_args; j++) {
+                        free(case_info.args[j]);
+                    }
+                    free(case_info.args);
+                    free(input_read.entry);
                     read_mode = FAILURE;
                     reading = false;
                 } else {
@@ -178,16 +190,22 @@ int main(int argc, char** argv) {
                                     output_read.entry,
                                     test_info.cipher,
                                     test_info.direction,
-                                    case_info.info);
-                    test_count++;
-                    if (test_result.passed) {
-                        tests_passed++;
+                                    case_info.args,
+                                    case_info.num_args);
+                    if (!test_result.success) {
+                        read_mode = FAILURE;
+                        reading = false;
                     } else {
-                        // TODO: add more info
-                        printf("Case failed!\n");
+                        test_count++;
+                        if (test_result.passed) tests_passed++;
+                        read_mode = ENTRY_INFO;
                     }
-                    read_mode = ENTRY_INFO;
-                    // TODO: free stuff
+                    for (size_t j = 0; j < case_info.num_args; j++) {
+                        free(case_info.args[j]);
+                    }
+                    free(case_info.args);
+                    free(input_read.entry);
+                    free(output_read.entry);
                 }
                 break;
             } default: {
@@ -394,20 +412,109 @@ case_info_t parse_case_info(char* line_buf/*, size_t num_args, size_t max_arg_le
         }*/
     }
 
-    case_info.info = args;
+    case_info.args = args;
+    case_info.num_args = num_args;
 
     case_info.success = true;
     return case_info;
 }
 
 entry_t read_input_output(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size/*, size_t max_size*/, bool input) {
+    entry_t entry;
+    entry.success = false;
 
+    char* text = malloc(sizeof(char));
+    text[0] = '\0';
+    size_t text_len = 1;
+
+    bool reading = true;
+    while (reading) {
+        *line_size = getline(&line_buf, line_buf_size, file);
+        if (input && starts_with(line_buf, IN_TO_OUT_TOKEN)) {
+            if (*line_size != IN_TO_OUT_TOKEN_LEN) return entry;
+            reading = false;
+        } else if (!input && (starts_with(line_buf, ARGS_TOKEN) || line_size == EOF)) {
+            reading = false;
+        } else {
+            text = realloc(text, (text_len + *line_size) * sizeof(char));
+            if (!text) return entry;
+            strcpy(text + text_len, line_buf);
+            text_len += *line_size;
+            text[text_len - 1] = '\0';
+        }
+    }
+
+    entry.entry = text;
+    entry.success = true;
+    return entry;
 }
 
-test_result_t conduct_test(char* input, char* output, enum cipher_e cipher, enum direction_e direction, char** args) {
+test_result_t conduct_test(char* input, char* output, enum cipher_e cipher, enum direction_e direction, char** args, size_t num_args) {
+    test_result_t test_result;
+    test_result.success = false;
 
+    char* correct_output = NULL;
+
+    switch (cipher) {
+        case AFFINE: {
+            if (num_args != 2) return test_result;
+
+            int step = (int) strtol(args[0], NULL, 10);
+            if ((args[0][0] != '0' && step == 0) || !are_coprime(step, 26)) return test_result;
+
+            int shift = (int) strtol(args[1], NULL, 10);
+            if (args[1][0] != '0' && shift == 0) return test_result;
+
+            correct_output = direction == ENCRYPTION ?
+                    affine_encrypt(input, step, shift) : affine_decrypt(input, step, shift);
+            break;
+        } case ATBASH: {
+            if (num_args != 0) return test_result;
+            correct_output = direction == ENCRYPTION ?
+                    atbash_encrypt(input) : atbash_decrypt(input);
+            break;
+        } case CAESAR: {
+            if (num_args != 1) return test_result;
+
+            int shift = (int) strtol(args[0], NULL, 10);
+            if (args[0][0] != '0' && shift == 0) return test_result;
+
+            correct_output = direction == ENCRYPTION ?
+                    caesar_encrypt(input, shift) : caesar_decrypt(input, shift);
+            break;
+        } case VIGENERE: {
+            if (num_args != 1) return test_result;
+
+            if (!is_only_upper_alpha(args[0])) return test_result;
+
+            correct_output = direction == ENCRYPTION ?
+                    vigenere_encrypt(input, args[0]) : vigenere_decrypt(input, args[0]);
+            break;
+        }
+    }
+
+    test_result.passed = strcmp(output, correct_output) == 0;
+    free(correct_output);
+
+    test_result.success = true;
+    return test_result;
 }
 
 void print_test_result(size_t count, size_t passed, enum cipher_e cipher, enum direction_e direction) {
-
+    printf("%s ", passed == count ? "PASSED" : "FAILED");
+    switch (cipher) {
+        case AFFINE:
+            printf("%8s %s: ", "affine",  direction == ENCRYPTION ? "encryption" : "decryption");
+            break;
+        case ATBASH:
+            printf("%8s %s: ", "atbash",  direction == ENCRYPTION ? "encryption" : "decryption");
+            break;
+        case CAESAR:
+            printf("%8s %s: ", "caesar",  direction == ENCRYPTION ? "encryption" : "decryption");
+            break;
+        case VIGENERE:
+            printf("%8s %s: ", "vigenere", direction == ENCRYPTION ? "encryption" : "decryption");
+            break;
+    }
+    printf("%3zu/%3zu (%3f)\n", passed, count, passed / (float) count);
 }

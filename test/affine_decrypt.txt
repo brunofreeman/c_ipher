@@ -1,6 +1,5 @@
 #cipher=affine
 #direction=decrypt
-#num_args=2
 ???<step><shift>
 input
 //--->
