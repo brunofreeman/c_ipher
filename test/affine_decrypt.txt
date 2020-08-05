@@ -1,6 +1,12 @@
 #cipher=affine
 #direction=decrypt
-???<step><shift>
-input
+???<7><-4>
+@[V3M7O"50q,cwq$63}|Kw!%R=n768k[
 //--->
-output
+@[L3G7K"50o,mao$63}|Ca!%D=v768c[
+!!!
+???<17><16>
+"vAigX~T4"--_$Nf"V2/4*a3};Tnt1{#
+//--->
+"lWyeF~R4"--_$Jh"L2/4*w3};Rjr1{#
+!!!

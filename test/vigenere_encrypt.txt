@@ -1,1 +1,12 @@
-???<key>
+#cipher=vigenere
+#direction=encrypt
+???<RKLAS>
+LxX?S[opAD|,8jA0B?=%!:7W?ETByxOX
+//--->
+ChI?S[ggKO|,8jS0S?=%!:7G?PTTphZX
+!!!
+???<UUNQWL>
+B_=U=;.uUUtNMs;H7KO'wK|bQm596e~r
+//--->
+V_=O=;.hKQeHGf;X7GZ'qE|oGi596p~l
+!!!

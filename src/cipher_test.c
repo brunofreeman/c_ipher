@@ -27,24 +27,19 @@
 #define EXT_LEN 4
 
 #define CIPHER_TOKEN "#cipher="
-#define DIRECTION_TOKEN "#direction="
-#define MAX_TEXT_LEN_TOKEN "#max_text_len="
-#define NUM_ARGS_TOKEN "#num_args="
-#define MAX_ARG_LEN_TOKEN "#max_arg_len="
 #define CIPHER_TOKEN_LEN 8
+#define DIRECTION_TOKEN "#direction="
 #define DIRECTION_TOKEN_LEN 11
-#define MAX_TEXT_LEN_TOKEN_LEN 14
-#define NUM_ARGS_TOKEN_LEN 10
-#define MAX_ARG_LEN_TOKEN_LEN 13
-#define MAX_TOKEN_LEN 14
 
 #define ARGS_TOKEN "???"
 #define ARGS_TOKEN_LEN 3
-#define ARGS_LEFT_DELIM '<'
-#define ARGS_RIGHT_DELIM '>'
-
 #define IN_TO_OUT_TOKEN "//--->\n"
 #define IN_TO_OUT_TOKEN_LEN 7
+#define CASE_END_TOKEN "!!!\n"
+#define CASE_END_TOKEN_LEN 4
+
+#define ARGS_LEFT_DELIM '<'
+#define ARGS_RIGHT_DELIM '>'
 
 enum read_mode_e {
     ENTRY_INFO = 0,
@@ -66,7 +61,7 @@ enum direction_e {
 };
 
 /*
- * @member info needs to be freed
+ * @member args needs to be freed
  */
 typedef struct {
     char** args;
@@ -95,18 +90,17 @@ typedef struct {
 
 bool starts_with(const char* text, const char* start);
 
-test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size);
+test_info_t read_test_info(char** line_buf, size_t* line_buf_size, FILE** file, ssize_t* line_size);
 
-case_info_t parse_case_info(char* line_buf/*, size_t num_args, size_t max_arg_len*/);
+case_info_t parse_case_info(const char* line_buf);
 
-entry_t read_input_output(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size/*, size_t max_size*/, bool input);
+entry_t read_input_output(char** line_buf, size_t* line_buf_size, FILE** file, ssize_t* line_size, bool input);
 
-test_result_t conduct_test(char* input, char* output, enum cipher_e cipher, enum direction_e direction, char** args, size_t num_args);
+test_result_t conduct_test(const char* input, const char* output, enum cipher_e cipher, enum direction_e direction, char** args, size_t num_args);
 
 void print_test_result(size_t count, size_t passed, enum cipher_e cipher, enum direction_e direction);
 
 int main(int argc, char** argv) {
-    printf("Running tests...\n");
 
     char test_names[NUM_TESTS][TEST_NAME_LEN] = {
             TEST_NAMES_LIST
@@ -124,15 +118,12 @@ int main(int argc, char** argv) {
         size_t line_buf_size = 0;
         ssize_t line_size;
 
-        test_info_t test_info = read_test_info(line_buf, &line_buf_size, file, &line_size);
+        test_info_t test_info = read_test_info(&line_buf, &line_buf_size, &file, &line_size);
         if (!test_info.success) {
             fclose(file);
             free(line_buf);
             return EXIT_FAILURE;
         }
-
-        // char*  input = malloc((test_info.max_text_len + 1) * sizeof(char));
-        // char* output = malloc((test_info.max_text_len + 1) * sizeof(char));
 
         enum read_mode_e read_mode = ENTRY_INFO;
 
@@ -151,7 +142,7 @@ int main(int argc, char** argv) {
                 if (line_size == EOF) {
                     reading = false;
                 } else {
-                    case_info = parse_case_info(line_buf/*, test_info.num_args, test_info.max_arg_len*/);
+                    case_info = parse_case_info(line_buf);
                     if (!case_info.success) {
                         read_mode = FAILURE;
                         reading = false;
@@ -161,7 +152,7 @@ int main(int argc, char** argv) {
                 }
                 break;
             } case INPUT: {
-                input_read = read_input_output(line_buf, &line_buf_size, file, &line_size, true);
+                input_read = read_input_output(&line_buf, &line_buf_size, &file, &line_size, true);
                 if (!input_read.success) {
                     for (size_t j = 0; j < case_info.num_args; j++) {
                         free(case_info.args[j]);
@@ -174,7 +165,7 @@ int main(int argc, char** argv) {
                 }
                 break;
             } case OUTPUT: {
-                output_read = read_input_output(line_buf, &line_buf_size, file, &line_size, true);
+                output_read = read_input_output(&line_buf, &line_buf_size, &file, &line_size, false);
                 if (!output_read.success) {
                     for (size_t j = 0; j < case_info.num_args; j++) {
                         free(case_info.args[j]);
@@ -197,7 +188,11 @@ int main(int argc, char** argv) {
                         reading = false;
                     } else {
                         test_count++;
-                        if (test_result.passed) tests_passed++;
+                        if (test_result.passed) {
+                            tests_passed++;
+                        } else {
+                            printf("Failed case with:\n\t>  in = %s\t> out = %s", input_read.entry, output_read.entry);
+                        }
                         read_mode = ENTRY_INFO;
                     }
                     for (size_t j = 0; j < case_info.num_args; j++) {
@@ -216,8 +211,6 @@ int main(int argc, char** argv) {
 
         fclose(file);
         free(line_buf);
-        // free(input);
-        // free(output);
 
         if (read_mode == FAILURE) return EXIT_FAILURE;
         else print_test_result(test_count, tests_passed, test_info.cipher, test_info.direction);
@@ -235,11 +228,11 @@ bool starts_with(const char* text, const char* start) {
     return !start[idx];
 }
 
-test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size) {
+test_info_t read_test_info(char** line_buf, size_t* line_buf_size, FILE** file, ssize_t* line_size) {
     test_info_t test_info;
     test_info.success = false;
 
-    *line_size = getline(&line_buf, line_buf_size, file);
+    *line_size = getline(&*line_buf, line_buf_size, *file);
 
     char cipher_names[NUM_CIPHERS][CIPHER_NAME_LEN] = {
             CIPHER_NAMES_LIST
@@ -250,7 +243,7 @@ test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ss
     for (size_t i = 0; i < NUM_CIPHERS; i++) {
         char potential_token[CIPHER_TOKEN_LEN + CIPHER_NAME_LEN + 1 + 1];
         snprintf(potential_token, sizeof(potential_token), "%s%s\n", CIPHER_TOKEN, cipher_names[i]);
-        if (strcmp(line_buf, potential_token) == 0) {
+        if (strcmp(*line_buf, potential_token) == 0) {
             cipher_code = i;
             break;
         }
@@ -261,7 +254,7 @@ test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ss
         test_info.cipher = (enum cipher_e) cipher_code;
     }
 
-    *line_size = getline(&line_buf, line_buf_size, file);
+    *line_size = getline(&*line_buf, line_buf_size, *file);
 
     char direction_names[NUM_DIRECTIONS][DIRECTION_NAME_LEN] = {
             DIRECTIONS_NAME_LIST
@@ -272,7 +265,7 @@ test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ss
     for (size_t i = 0; i < NUM_DIRECTIONS; i++) {
         char potential_token[DIRECTION_TOKEN_LEN + DIRECTION_NAME_LEN + 1 + 1];
         snprintf(potential_token, sizeof(potential_token), "%s%s\n", DIRECTION_TOKEN, direction_names[i]);
-        if (strcmp(line_buf, potential_token) == 0) {
+        if (strcmp(*line_buf, potential_token) == 0) {
             direction_code = i;
             break;
         }
@@ -283,41 +276,11 @@ test_info_t read_test_info(char* line_buf, size_t* line_buf_size, FILE* file, ss
         test_info.direction = (enum direction_e) direction_code;
     }
 
-    /*size_t args[3];
-    size_t lens[3] = {
-            MAX_TEXT_LEN_TOKEN_LEN, NUM_ARGS_TOKEN_LEN, MAX_ARG_LEN_TOKEN_LEN
-    };
-    char token_names[3][MAX_TOKEN_LEN] = {
-            MAX_TEXT_LEN_TOKEN, NUM_ARGS_TOKEN, MAX_ARG_LEN_TOKEN
-    };
-
-    for (size_t i = 0; i < 3; i++) {
-        *line_size = getline(&line_buf, line_buf_size, file);
-        if (*line_size < lens[i] || !starts_with(line_buf, token_names[i])) {
-            test_info.success = false;
-            return test_info;
-        } else {
-            char arg_text[*line_size - lens[i] + 1];
-            snprintf(arg_text, sizeof(arg_text), "%*s", (int) (*line_size - lens[i]), line_buf + lens[i]);
-            size_t arg = strtol(arg_text, NULL, 10);
-            if (arg_text[0] != '0' && arg == 0) {
-                test_info.success = false;
-                return test_info;
-            } else {
-                args[i] = arg;
-            }
-        }
-    }
-
-    test_info.max_text_len = args[0];
-    test_info.num_args = args[1];
-    test_info.max_arg_len = args[2];*/
-
     test_info.success = true;
     return test_info;
 }
 
-case_info_t parse_case_info(char* line_buf/*, size_t num_args, size_t max_arg_len*/) {
+case_info_t parse_case_info(const char* line_buf) {
     case_info_t case_info;
     case_info.success = false;
 
@@ -345,7 +308,7 @@ case_info_t parse_case_info(char* line_buf/*, size_t num_args, size_t max_arg_le
     size_t arg_lens_idx = 0;
     line_idx = ARGS_TOKEN_LEN;
 
-    while (line_buf[line_idx]) {
+    while (line_buf[line_idx] && line_buf[line_idx] != '\n') {
         char other_delim = prev_delim == ARGS_RIGHT_DELIM ? ARGS_LEFT_DELIM : ARGS_RIGHT_DELIM;
         if (line_buf[line_idx] == other_delim) {
             prev_delim = other_delim;
@@ -363,53 +326,30 @@ case_info_t parse_case_info(char* line_buf/*, size_t num_args, size_t max_arg_le
         args[i] = malloc(arg_lens[i] * sizeof(char));
     }
 
-    size_t line_buf_idx = ARGS_TOKEN_LEN;
+    line_idx = ARGS_TOKEN_LEN;
     size_t args_idx = 0;
     size_t arg_text_idx = 0;
 
-    while (line_buf[line_buf_idx]) {
-        /*if (prev_delim == ' ') {
-            if (c == ARGS_LEFT_DELIM) {
-                prev_delim = ARGS_RIGHT_DELIM;
-                continue;
-            } else {
-                return case_info;
-            }
-        }*/
+    while (line_buf[line_idx] && line_buf[line_idx] != '\n') {
         char other_delim = prev_delim == ARGS_RIGHT_DELIM ? ARGS_LEFT_DELIM : ARGS_RIGHT_DELIM;
 
-        if (line_buf[line_buf_idx] == other_delim) {
+        if (line_buf[line_idx] == other_delim) {
             prev_delim = other_delim;
             if (prev_delim == ARGS_RIGHT_DELIM) {
                 args_idx++;
                 arg_text_idx = 0;
             }
-        } else if (line_buf[line_buf_idx] == prev_delim) {
+        } else if (line_buf[line_idx] == prev_delim) {
+            for (size_t j = 0; j < num_args; j++) {
+                free(args[j]);
+            }
+            free(args);
             return case_info;
         } else {
-            args[args_idx][arg_text_idx++] = line_buf[line_buf_idx];
+            args[args_idx][arg_text_idx++] = line_buf[line_idx];
         }
 
-        /*switch (c) {
-            case ARGS_LEFT_DELIM:
-                if (prev_delim == ARGS_RIGHT_DELIM) {
-                    prev_delim = ARGS_LEFT_DELIM;
-                } else {
-                    return case_info;
-                }
-                prev_delim = ARGS_LEFT_DELIM;
-                break;
-            case ARGS_RIGHT_DELIM:
-                if (prev_delim == ARGS_LEFT_DELIM) {
-                    prev_delim = ARGS_RIGHT_DELIM;
-                    args_idx++;
-                } else {
-                    return case_info;
-                }
-                break;
-            default:
-                args[args_idx][arg_text_idx++] = c;
-        }*/
+        line_idx++;
     }
 
     case_info.args = args;
@@ -419,7 +359,7 @@ case_info_t parse_case_info(char* line_buf/*, size_t num_args, size_t max_arg_le
     return case_info;
 }
 
-entry_t read_input_output(char* line_buf, size_t* line_buf_size, FILE* file, ssize_t* line_size/*, size_t max_size*/, bool input) {
+entry_t read_input_output(char** line_buf, size_t* line_buf_size, FILE** file, ssize_t* line_size/*, size_t max_size*/, bool input) {
     entry_t entry;
     entry.success = false;
 
@@ -429,16 +369,28 @@ entry_t read_input_output(char* line_buf, size_t* line_buf_size, FILE* file, ssi
 
     bool reading = true;
     while (reading) {
-        *line_size = getline(&line_buf, line_buf_size, file);
-        if (input && starts_with(line_buf, IN_TO_OUT_TOKEN)) {
-            if (*line_size != IN_TO_OUT_TOKEN_LEN) return entry;
+        *line_size = getline(&*line_buf, line_buf_size, *file);
+        if (input && starts_with(*line_buf, IN_TO_OUT_TOKEN)) {
+            if (*line_size != IN_TO_OUT_TOKEN_LEN) {
+                free(text);
+                return entry;
+            }
             reading = false;
-        } else if (!input && (starts_with(line_buf, ARGS_TOKEN) || line_size == EOF)) {
+        } else if (!input && starts_with(*line_buf, CASE_END_TOKEN)) {
+            if (*line_size != CASE_END_TOKEN_LEN) {
+                free(text);
+                return entry;
+            }
             reading = false;
         } else {
-            text = realloc(text, (text_len + *line_size) * sizeof(char));
-            if (!text) return entry;
-            strcpy(text + text_len, line_buf);
+            char* new_text = realloc(text, (text_len + *line_size) * sizeof(char));
+            if (!new_text) {
+                free(text);
+                return entry;
+            } else {
+                text = new_text;
+            }
+            strcpy(text + (text_len - 1), *line_buf);
             text_len += *line_size;
             text[text_len - 1] = '\0';
         }
@@ -449,11 +401,11 @@ entry_t read_input_output(char* line_buf, size_t* line_buf_size, FILE* file, ssi
     return entry;
 }
 
-test_result_t conduct_test(char* input, char* output, enum cipher_e cipher, enum direction_e direction, char** args, size_t num_args) {
+test_result_t conduct_test(const char* input, const char* output, const enum cipher_e cipher, const enum direction_e direction, char** args, const size_t num_args) {
     test_result_t test_result;
     test_result.success = false;
 
-    char* correct_output = NULL;
+    char* test_output = NULL;
 
     switch (cipher) {
         case AFFINE: {
@@ -465,13 +417,13 @@ test_result_t conduct_test(char* input, char* output, enum cipher_e cipher, enum
             int shift = (int) strtol(args[1], NULL, 10);
             if (args[1][0] != '0' && shift == 0) return test_result;
 
-            correct_output = direction == ENCRYPTION ?
-                    affine_encrypt(input, step, shift) : affine_decrypt(input, step, shift);
+            test_output = direction == ENCRYPTION ?
+                          affine_encrypt(input, step, shift) : affine_decrypt(input, step, shift);
             break;
         } case ATBASH: {
             if (num_args != 0) return test_result;
-            correct_output = direction == ENCRYPTION ?
-                    atbash_encrypt(input) : atbash_decrypt(input);
+            test_output = direction == ENCRYPTION ?
+                          atbash_encrypt(input) : atbash_decrypt(input);
             break;
         } case CAESAR: {
             if (num_args != 1) return test_result;
@@ -479,28 +431,28 @@ test_result_t conduct_test(char* input, char* output, enum cipher_e cipher, enum
             int shift = (int) strtol(args[0], NULL, 10);
             if (args[0][0] != '0' && shift == 0) return test_result;
 
-            correct_output = direction == ENCRYPTION ?
-                    caesar_encrypt(input, shift) : caesar_decrypt(input, shift);
+            test_output = direction == ENCRYPTION ?
+                          caesar_encrypt(input, shift) : caesar_decrypt(input, shift);
             break;
         } case VIGENERE: {
             if (num_args != 1) return test_result;
 
             if (!is_only_upper_alpha(args[0])) return test_result;
 
-            correct_output = direction == ENCRYPTION ?
-                    vigenere_encrypt(input, args[0]) : vigenere_decrypt(input, args[0]);
+            test_output = direction == ENCRYPTION ?
+                          vigenere_encrypt(input, args[0]) : vigenere_decrypt(input, args[0]);
             break;
         }
     }
 
-    test_result.passed = strcmp(output, correct_output) == 0;
-    free(correct_output);
+    test_result.passed = strcmp(output, test_output) == 0;
+    free(test_output);
 
     test_result.success = true;
     return test_result;
 }
 
-void print_test_result(size_t count, size_t passed, enum cipher_e cipher, enum direction_e direction) {
+void print_test_result(const size_t count, const size_t passed, const enum cipher_e cipher, const enum direction_e direction) {
     printf("%s ", passed == count ? "PASSED" : "FAILED");
     switch (cipher) {
         case AFFINE:
@@ -516,5 +468,5 @@ void print_test_result(size_t count, size_t passed, enum cipher_e cipher, enum d
             printf("%8s %s: ", "vigenere", direction == ENCRYPTION ? "encryption" : "decryption");
             break;
     }
-    printf("%3zu/%3zu (%3f)\n", passed, count, passed / (float) count);
+    printf("%3zu/%-3zu (%.1f%%)\n", passed, count, passed / (float) count * 100);
 }

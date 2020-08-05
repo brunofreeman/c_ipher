@@ -1,1 +1,12 @@
-???<shift>
+#cipher=caesar
+#direction=encrypt
+???<22>
+zM{0CO]g5zb{u!ttJ"M}gSlqQ&.P7%2>
+//--->
+vI{0YK]c5vx{q!ppF"I}cOhmM&.L7%2>
+!!!
+???<3>
+Bc}Lzja1@RN?x+;9HAUfH&V--,KkNwc^
+//--->
+Ef}Ocmd1@UQ?a+;9KDXiK&Y--,NnQzf^
+!!!

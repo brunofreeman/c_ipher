@@ -1,1 +1,12 @@
-???<step><shift>
+#cipher=affine
+#direction=encrypt
+???<7><-4>
+@[L3G7K"50o,mao$63}|Ca!%D=v768c[
+//--->
+@[V3M7O"50q,cwq$63}|Kw!%R=n768k[
+!!!
+???<17><16>
+"lWyeF~R4"--_$Jh"L2/4*w3};Rjr1{#
+//--->
+"vAigX~T4"--_$Nf"V2/4*a3};Tnt1{#
+!!!
