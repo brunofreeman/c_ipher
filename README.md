@@ -16,7 +16,7 @@ The included `CMakeLists.txt` builds both of these executables.
 ## Test File Format
 The test files are assumed to adhere to the following format.
 `[]` notation denotes variable information.
-`...` notation denotes a continuation or variable length.
+`...` notation denotes a continuation of variable length.
 Note the newline at the end of the file.
 ```text
 #cipher=[cipher name]
