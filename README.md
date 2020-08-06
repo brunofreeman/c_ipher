@@ -2,10 +2,11 @@
 `c_ipher` is a collection of ciphers implemented in C.
 Thus far, the following ciphers are available:
 
-1. [Atbash](https://en.wikipedia.org/wiki/Atbash)
-2. [Caesar](https://en.wikipedia.org/wiki/Caesar_cipher)
-3. [Vigenère](https://en.wikipedia.org/wiki/Vigen%C3%A8re_cipher)
-4. [Affine](https://en.wikipedia.org/wiki/Affine_cipher)
+1. [Affine](https://en.wikipedia.org/wiki/Affine_cipher)
+2. [Atbash](https://en.wikipedia.org/wiki/Atbash)
+3. [Baconian](https://en.wikipedia.org/wiki/Bacon%27s_cipher)
+4. [Caesar](https://en.wikipedia.org/wiki/Caesar_cipher)
+5. [Vigenère](https://en.wikipedia.org/wiki/Vigen%C3%A8re_cipher)
 
 ## Executables
 

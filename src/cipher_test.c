@@ -5,17 +5,18 @@
 #include "ciphers.h"
 #include "validate.h"
 
-#define NUM_TESTS 8
+#define NUM_TESTS 10
 #define TEST_NAME_LEN 17
-#define NUM_CIPHERS 4
+#define NUM_CIPHERS 5
 #define CIPHER_NAME_LEN 9
 
-#define CIPHER_NAMES_LIST "affine", "atbash", "caesar", "vigenere"
+#define CIPHER_NAMES_LIST "affine", "atbash", "baconian", "caesar", "vigenere"
 #define TEST_NAMES_LIST \
-  "affine_encrypt",   "affine_decrypt", \
-  "atbash_encrypt",   "atbash_decrypt", \
-  "caesar_encrypt",   "caesar_decrypt", \
-"vigenere_encrypt", "vigenere_decrypt"  \
+      "affine_encrypt",   "affine_decrypt", \
+      "atbash_encrypt",   "atbash_decrypt", \
+    "baconian_encrypt", "baconian_decrypt", \
+      "caesar_encrypt",   "caesar_decrypt", \
+    "vigenere_encrypt", "vigenere_decrypt"  \
 
 #define NUM_DIRECTIONS 2
 #define DIRECTIONS_NAME_LIST "encrypt", "decrypt"
@@ -51,8 +52,9 @@ enum read_mode_e {
 enum cipher_e {
     AFFINE   = 0,
     ATBASH   = 1,
-    CAESAR   = 2,
-    VIGENERE = 3
+    BACONIAN = 2,
+    CAESAR   = 3,
+    VIGENERE = 4
 };
 
 enum direction_e {
@@ -188,11 +190,7 @@ int main(int argc, char** argv) {
                         reading = false;
                     } else {
                         test_count++;
-                        if (test_result.passed) {
-                            tests_passed++;
-                        } else {
-                            printf("Failed case with:\n\t>  in = %s\t> out = %s", input_read.entry, output_read.entry);
-                        }
+                        tests_passed += test_result.passed;
                         read_mode = ENTRY_INFO;
                     }
                     for (size_t j = 0; j < case_info.num_args; j++) {
@@ -425,6 +423,11 @@ test_result_t conduct_test(const char* input, const char* output, const enum cip
             test_output = direction == ENCRYPTION ?
                           atbash_encrypt(input) : atbash_decrypt(input);
             break;
+        } case BACONIAN: {
+            if (num_args != 0) return test_result;
+            test_output = direction == ENCRYPTION ?
+                          baconian_encrypt(input) : baconian_decrypt(input);
+            break;
         } case CAESAR: {
             if (num_args != 1) return test_result;
 
@@ -432,7 +435,7 @@ test_result_t conduct_test(const char* input, const char* output, const enum cip
             if (args[0][0] != '0' && shift == 0) return test_result;
 
             test_output = direction == ENCRYPTION ?
-                          caesar_encrypt(input, shift) : caesar_decrypt(input, shift);
+                    caesar_encrypt(input, shift) : caesar_decrypt(input, shift);
             break;
         } case VIGENERE: {
             if (num_args != 1) return test_result;
@@ -446,6 +449,11 @@ test_result_t conduct_test(const char* input, const char* output, const enum cip
     }
 
     test_result.passed = strcmp(output, test_output) == 0;
+
+    if (!test_result.passed) {
+        printf("Failed case with:\n\t>       in = %s\t> true out = %s\t> test out = %s", input, output, test_output);
+    }
+
     free(test_output);
 
     test_result.success = true;
@@ -454,19 +462,9 @@ test_result_t conduct_test(const char* input, const char* output, const enum cip
 
 void print_test_result(const size_t count, const size_t passed, const enum cipher_e cipher, const enum direction_e direction) {
     printf("%s ", passed == count ? "PASSED" : "FAILED");
-    switch (cipher) {
-        case AFFINE:
-            printf("%8s %s: ", "affine",  direction == ENCRYPTION ? "encryption" : "decryption");
-            break;
-        case ATBASH:
-            printf("%8s %s: ", "atbash",  direction == ENCRYPTION ? "encryption" : "decryption");
-            break;
-        case CAESAR:
-            printf("%8s %s: ", "caesar",  direction == ENCRYPTION ? "encryption" : "decryption");
-            break;
-        case VIGENERE:
-            printf("%8s %s: ", "vigenere", direction == ENCRYPTION ? "encryption" : "decryption");
-            break;
-    }
+    char cipher_names[NUM_CIPHERS][CIPHER_NAME_LEN] = {
+            CIPHER_NAMES_LIST
+    };
+    printf("%8s %s: ", cipher_names[cipher],   direction == ENCRYPTION ? "encryption" : "decryption");
     printf("%3zu/%-3zu (%.1f%%)\n", passed, count, passed / (float) count * 100);
 }

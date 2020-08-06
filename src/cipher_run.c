@@ -20,10 +20,11 @@ int help() {
     printf("\t3) put your message in single quotes; some characters may need to be escaped\n");
     printf("\t4) keys should consist of only uppercase letters\n");
     printf("available ciphers and their required extra arguments:\n");
+    print_cipher_help("affine", "step shift");
     print_cipher_help("atbash", "N/A");
+    print_cipher_help("baconian", "N/A");
     print_cipher_help("caesar", "shift");
     print_cipher_help("vigenere", "key");
-    print_cipher_help("affine", "step shift");
     return EXIT_SUCCESS;
 }
 
@@ -60,17 +61,26 @@ int main(int argc, char** argv) {
             text = atbash_decrypt(argv[3]);
         } else return usage();
 
-    } else if (strcmp(argv[1], "--caesar") == 0) {
-        if (argc != 5) return usage();
-
-        int shift = (int) strtol(argv[3], NULL, 10);
-        if (argv[3][0] != '0' && shift == 0) return usage();
+    } else if (strcmp(argv[1], "--baconian") == 0) {
+        if (argc != 4) return usage();
 
         if (strcmp(argv[2], "-e") == 0) {
-            text = caesar_encrypt(argv[4], shift);
+            text = baconian_encrypt(argv[3]);
         } else if (strcmp(argv[2], "-d") == 0) {
-            text = caesar_decrypt(argv[4], shift);
+            text = baconian_decrypt(argv[3]);
         } else return usage();
+
+    } else if (strcmp(argv[1], "--caesar") == 0) {
+            if (argc != 5) return usage();
+
+            int shift = (int) strtol(argv[3], NULL, 10);
+            if (argv[3][0] != '0' && shift == 0) return usage();
+
+            if (strcmp(argv[2], "-e") == 0) {
+                text = caesar_encrypt(argv[4], shift);
+            } else if (strcmp(argv[2], "-d") == 0) {
+                text = caesar_decrypt(argv[4], shift);
+            } else return usage();
 
     } else if (strcmp(argv[1], "--vigenere") == 0) {
         if (argc != 5) return usage();
