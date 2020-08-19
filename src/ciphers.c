@@ -42,16 +42,55 @@ static int alpha_mod_inverse(const int num) {
     return inverse;
 }
 
+/*
+ * @param str the char pointer
+ *        to realloc()
+ * @param len the number of chars
+ *            to realloc() to
+ * @return the new pointer if realloc()
+ *         was successful, the original
+ *         pointer if not
+ */
+char* realloc_to_len(char* str, size_t len) {
+    char* new_str = realloc(str, len * sizeof(char));
+    if (!new_str) {
+        return str;
+    } else {
+        return new_str;
+    }
+}
+
 char* a1z26_encrypt(const char* plaintext) {
-    /*
-     * for each char:
-     *      if letter:
-     *          add number conversion
-     *          if next char is a letter:
-     *              add a hyphen
-     *      else:
-     *          add to ciphertext
-     */
+    size_t plaintext_len = strlen(plaintext);
+    char* ciphertext = malloc((3 * plaintext_len + 1) * sizeof(char));
+    size_t plaintext_idx = 0;
+    size_t ciphertext_len = 0;
+
+    while (plaintext[plaintext_idx]) {
+        char c = plaintext[plaintext_idx];
+        bool upper = 'A' <= c && c <= 'Z';
+        bool lower = 'a' <= c && c <= 'z';
+        if (upper || lower) {
+            size_t code = c + 1 - (upper * 'A' + lower * 'a');
+            if (code >= 10) {
+                ciphertext[ciphertext_len++] = (code < 20) * '1' + (code >= 20) * '2';
+            }
+            ciphertext[ciphertext_len++] = '0' + (code % 10);
+
+            char next = plaintext[plaintext_idx + 1];
+
+            if (('A' <= next && next <= 'Z') || ('a' <= next && next <= 'z')) {
+                ciphertext[ciphertext_len++] = '-';
+            }
+        } else {
+            ciphertext[ciphertext_len++] = c;
+        }
+        plaintext_idx++;
+    }
+
+    ciphertext[ciphertext_len++] = '\0';
+
+    return realloc_to_len(ciphertext, ciphertext_len);
 }
 
 char* alz26_decrypt(const char* ciphertext) {
@@ -285,12 +324,8 @@ char* baconian_decrypt(const char* ciphertext) {
     free(baconian_buf);
 
     plaintext[plaintext_len++] = '\0';
-    char* new_plaintext = realloc(plaintext, plaintext_len * sizeof(char));
-    if (!new_plaintext) {
-        return plaintext;
-    } else {
-        return new_plaintext;
-    }
+
+    return realloc_to_len(plaintext, plaintext_len);
 }
 
 char* caesar_encrypt(const char* plaintext, const int shift) {

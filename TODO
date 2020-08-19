@@ -7,3 +7,4 @@ TODO: add flag(s) for cleaning input
         * etc.
 TODO: --help for each cipher with more detail
 TODO: add more test cases for all tests
+TODO: is_upper(), is_lower(), is_letter()
