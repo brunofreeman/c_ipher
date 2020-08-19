@@ -6,4 +6,4 @@ TODO: add flag(s) for cleaning input
         * convert to upper/lowercase
         * etc.
 TODO: --help for each cipher with more detail
-TODO: see if Baconian code can be cleaned-up
+TODO: add more test cases for all tests

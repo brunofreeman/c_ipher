@@ -42,6 +42,22 @@ static int alpha_mod_inverse(const int num) {
     return inverse;
 }
 
+char* a1z26_encrypt(const char* plaintext) {
+    /*
+     * for each char:
+     *      if letter:
+     *          add number conversion
+     *          if next char is a letter:
+     *              add a hyphen
+     *      else:
+     *          add to ciphertext
+     */
+}
+
+char* alz26_decrypt(const char* ciphertext) {
+
+}
+
 char* affine_encrypt(const char* plaintext, const int step, const int shift) {
     size_t len = strlen(plaintext);
     char* ciphertext = malloc((len + 1) * sizeof(char));
@@ -100,6 +116,28 @@ char* atbash_decrypt(const char* ciphertext) {
 }
 
 /*
+ * @param plaintext the plaintext
+ * @contract plaintext must be
+ *           null-terminated
+ * @return the length of the Baconian
+ *         encryption of plaintext
+ */
+size_t baconian_encryption_len(const char* plaintext) {
+    size_t ciphertext_len = 0;
+    size_t plaintext_idx = 0;
+
+    while (plaintext[plaintext_idx]) {
+        char c = plaintext[plaintext_idx];
+        bool upper = 'A' <= c && c <= 'Z';
+        bool lower = 'a' <= c && c <= 'z';
+        ciphertext_len += BACONIAN_LEN * (upper || lower) + (!upper && !lower);
+        plaintext_idx++;
+    }
+
+    return ciphertext_len + 1;
+}
+
+/*
  * @param c the char to encrypt
  * @contract c is a letter
  * @contract caller is responsible for
@@ -125,23 +163,13 @@ char* to_baconian(const char c) {
 }
 
 char* baconian_encrypt(const char* plaintext) {
-    size_t ciphertext_len = 0;
-    size_t plaintext_idx = 0;
-
-    while (plaintext[plaintext_idx]) {
-        char c = plaintext[plaintext_idx];
-        bool upper = 'A' <= c && c <= 'Z';
-        bool lower = 'a' <= c && c <= 'z';
-        ciphertext_len += BACONIAN_LEN * (upper || lower) + (!upper && !lower);
-        plaintext_idx++;
-    }
-    ciphertext_len++;
+    size_t ciphertext_len = baconian_encryption_len(plaintext);
 
     char* ciphertext = malloc(ciphertext_len * sizeof(char));
     ciphertext[ciphertext_len - 1] = '\0';
 
+    size_t plaintext_idx = 0;
     size_t ciphertext_idx = 0;
-    plaintext_idx = 0;
 
     while (plaintext[plaintext_idx]) {
         char c = plaintext[plaintext_idx];
@@ -194,7 +222,7 @@ char from_baconian(const char* baconian) {
 
         c += (curr_upper && curr_bac == 'B') || (curr_lower && curr_bac == 'b');
 
-        c <<= (i != BACONIAN_LEN - 1) * 1;
+        c <<= i != BACONIAN_LEN - 1;
     }
 
     c += upper * 'A' + lower * 'a';
@@ -203,43 +231,54 @@ char from_baconian(const char* baconian) {
 }
 
 char* baconian_decrypt(const char* ciphertext) {
-    char* baconian_buf = calloc(BACONIAN_LEN, sizeof(char));
-    size_t ciphertext_idx = 0;
-    size_t plaintext_len = 0;
-
     size_t ciphertext_len = strlen(ciphertext);
 
     char* plaintext = malloc((ciphertext_len + 1) * sizeof(char));
     plaintext[ciphertext_len] = '\0';
 
-    while (ciphertext[ciphertext_idx]) {
+    char* baconian_buf = malloc(BACONIAN_LEN * sizeof(char));
+    size_t ciphertext_idx = 0;
+    size_t plaintext_len = 0;
+
+    // fill buffer
+    while (ciphertext_idx < BACONIAN_LEN && ciphertext[ciphertext_idx]) {
         for (size_t i = 0; i < BACONIAN_LEN - 1; i++) baconian_buf[i] = baconian_buf[i + 1];
         baconian_buf[BACONIAN_LEN - 1] = ciphertext[ciphertext_idx];
+        ciphertext_idx++;
+    }
 
+    while (ciphertext_idx < ciphertext_len) {
         char c = from_baconian(baconian_buf);
 
         if (c) {
             plaintext[plaintext_len++] = c;
-            ciphertext_idx += BACONIAN_LEN;
-            if (ciphertext_idx >= ciphertext_len) {
-                size_t remainder = BACONIAN_LEN - (ciphertext_idx - ciphertext_len) - 1;
-                for (size_t i = 0; i < remainder; i++) {
-                    plaintext[plaintext_len++] = ciphertext[ciphertext_idx - BACONIAN_LEN + 1 + i];
-                }
-                ciphertext_idx = ciphertext_len;
+
+            bool full_copy = ciphertext_idx + BACONIAN_LEN <= ciphertext_len;
+
+            if (full_copy) {
+                strncpy(baconian_buf, &ciphertext[ciphertext_idx], BACONIAN_LEN);
             } else {
-                strncpy(baconian_buf, &ciphertext[ciphertext_idx - BACONIAN_LEN], BACONIAN_LEN);
+                strncpy(baconian_buf, &ciphertext[ciphertext_idx], ciphertext_len - ciphertext_idx);
+                baconian_buf[ciphertext_len - ciphertext_idx] = '\0';
             }
+
+            ciphertext_idx += BACONIAN_LEN;
         } else {
-            ciphertext_idx++;
-            if (ciphertext_idx >= BACONIAN_LEN) {
-                plaintext[plaintext_len++] = ciphertext[ciphertext_idx - BACONIAN_LEN];
-                if (ciphertext_idx == ciphertext_len) {
-                    for (size_t i = 0; i < BACONIAN_LEN - 1; i++) {
-                        plaintext[plaintext_len++] = ciphertext[ciphertext_idx - BACONIAN_LEN + 1 + i];
-                    }
-                }
-            }
+            plaintext[plaintext_len++] = ciphertext[ciphertext_idx - BACONIAN_LEN];
+
+            for (size_t i = 0; i < BACONIAN_LEN - 1; i++) baconian_buf[i] = baconian_buf[i + 1];
+            baconian_buf[BACONIAN_LEN - 1] = ciphertext[ciphertext_idx++];
+        }
+    }
+
+    // empty buffer
+    char c = from_baconian(baconian_buf);
+    if (c) {
+        plaintext[plaintext_len++] = c;
+    } else {
+        size_t baconian_buf_idx = 0;
+        while (baconian_buf[baconian_buf_idx]) {
+            plaintext[plaintext_len++] = baconian_buf[baconian_buf_idx++];
         }
     }
 

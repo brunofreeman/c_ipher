@@ -11,6 +11,20 @@
 
 /*
  * @param plaintext the text to encrypt
+ * @return the plaintext encrypted with
+ *         the A1Z26 cipher
+ */
+char* a1z26_encrypt(const char* plaintext);
+
+/*
+ * @param ciphertext the text to decrypt
+ * @return the ciphertext decrypted from
+ *         the A1Z26 cipher
+ */
+char* alz26_decrypt(const char* ciphertext);
+
+/*
+ * @param plaintext the text to encrypt
  * @param step the space between consecutive
  *             mappings
  * @param shift the shift common to all
