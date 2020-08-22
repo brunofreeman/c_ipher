@@ -281,8 +281,7 @@ char* baconian_decrypt(const char* ciphertext) {
 
     // fill buffer
     while (ciphertext_idx < BACONIAN_LEN && ciphertext[ciphertext_idx]) {
-        for (size_t i = 0; i < BACONIAN_LEN - 1; i++) baconian_buf[i] = baconian_buf[i + 1];
-        baconian_buf[BACONIAN_LEN - 1] = ciphertext[ciphertext_idx];
+        baconian_buf[ciphertext_idx] = ciphertext[ciphertext_idx];
         ciphertext_idx++;
     }
 
