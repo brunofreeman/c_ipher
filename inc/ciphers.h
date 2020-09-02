@@ -21,7 +21,7 @@ char* a1z26_encrypt(const char* plaintext);
  * @return the ciphertext decrypted from
  *         the A1Z26 cipher
  */
-char* alz26_decrypt(const char* ciphertext);
+char* a1z26_decrypt(const char* ciphertext);
 
 /*
  * @param plaintext the text to encrypt
