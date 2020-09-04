@@ -5,13 +5,14 @@
 #include "ciphers.h"
 #include "validate.h"
 
-#define NUM_TESTS 10
+#define NUM_TESTS 12
 #define TEST_NAME_LEN 17
-#define NUM_CIPHERS 5
+#define NUM_CIPHERS 6
 #define CIPHER_NAME_LEN 9
 
-#define CIPHER_NAMES_LIST "affine", "atbash", "baconian", "caesar", "vigenere"
+#define CIPHER_NAMES_LIST "a1z26", "affine", "atbash", "baconian", "caesar", "vigenere"
 #define TEST_NAMES_LIST \
+       "a1z26_encrypt",    "a1z26_decrypt", \
       "affine_encrypt",   "affine_decrypt", \
       "atbash_encrypt",   "atbash_decrypt", \
     "baconian_encrypt", "baconian_decrypt", \
@@ -50,11 +51,12 @@ enum read_mode_e {
 };
 
 enum cipher_e {
-    AFFINE   = 0,
-    ATBASH   = 1,
-    BACONIAN = 2,
-    CAESAR   = 3,
-    VIGENERE = 4
+    A1Z26    = 0,
+    AFFINE   = 1,
+    ATBASH   = 2,
+    BACONIAN = 3,
+    CAESAR   = 4,
+    VIGENERE = 5
 };
 
 enum direction_e {
@@ -410,7 +412,12 @@ test_result_t conduct_test(const char* input, const char* output, const enum cip
     char* test_output = NULL;
 
     switch (cipher) {
-        case AFFINE: {
+        case A1Z26: {
+            if (num_args != 0) return test_result;
+            test_output = direction == ENCRYPTION ?
+                          a1z26_encrypt(input) : a1z26_decrypt(input);
+            break;
+        } case AFFINE: {
             if (num_args != 2) return test_result;
 
             int step = (int) strtol(args[0], NULL, 10);
@@ -455,7 +462,15 @@ test_result_t conduct_test(const char* input, const char* output, const enum cip
     test_result.passed = strcmp(output, test_output) == 0;
 
     if (!test_result.passed) {
-        printf("Failed case with:\n\t>       in = %s\t> true out = %s\t> test out = %s", input, output, test_output);
+        // printf("Failed case with:\n\t>       in = %s\t> true out = %s\t> test out = %s", input, output, test_output);
+        printf("FAILED CASE\n");
+        printf("in\n--\n");
+        printf("%s", input);
+        printf("\ntrue out\n--------\n");
+        printf("%s", output);
+        printf("\ntest out\n--------\n");
+        printf("%s", test_output);
+        printf("\n");
     }
 
     free(test_output);

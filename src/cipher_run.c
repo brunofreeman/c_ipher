@@ -20,6 +20,7 @@ int help() {
     printf("\t3) put your message in single quotes; some characters may need to be escaped\n");
     printf("\t4) keys should consist of only uppercase letters\n");
     printf("available ciphers and their required extra arguments:\n");
+    print_cipher_help("a1z26", "N/A");
     print_cipher_help("affine", "step shift");
     print_cipher_help("atbash", "N/A");
     print_cipher_help("baconian", "N/A");
@@ -37,7 +38,16 @@ int main(int argc, char** argv) {
 
     char* text;
 
-    if (strcmp(argv[1], "--affine") == 0) {
+    if (strcmp(argv[1], "--a1z26") == 0) {
+        if (argc != 4) return usage();
+
+        if (strcmp(argv[2], "-e") == 0) {
+            text = a1z26_encrypt(argv[3]);
+        } else if (strcmp(argv[2], "-d") == 0) {
+            text = a1z26_decrypt(argv[3]);
+        } else return usage();
+
+    } else if (strcmp(argv[1], "--affine") == 0) {
         if (argc != 6) return usage();
 
         int step = (int) strtol(argv[3], NULL, 10);
