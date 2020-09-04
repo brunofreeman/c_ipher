@@ -100,7 +100,7 @@ entry_t read_input_output(char** line_buf, size_t* line_buf_size, FILE** file, s
 
 test_result_t conduct_test(const char* input, const char* output, enum cipher_e cipher, enum direction_e direction, char** args, size_t num_args);
 
-void print_test_result(size_t count, size_t passed, size_t chars_processed, enum cipher_e cipher, enum direction_e direction);
+void print_test_result(size_t count, size_t passed, size_t chars_in, size_t chars_out, enum cipher_e cipher, enum direction_e direction);
 
 int main(int argc, char** argv) {
 
@@ -135,7 +135,8 @@ int main(int argc, char** argv) {
 
         size_t test_count = 0;
         size_t tests_passed = 0;
-        size_t chars_processed = 0;
+        size_t chars_in = 0;
+        size_t chars_out = 0;
 
         bool reading = true;
 
@@ -192,7 +193,8 @@ int main(int argc, char** argv) {
                     } else {
                         test_count++;
                         tests_passed += test_result.passed;
-                        chars_processed += strlen(input_read.entry);
+                        chars_in += strlen(input_read.entry);
+                        chars_out += strlen(output_read.entry);
                         read_mode = ENTRY_INFO;
                     }
                     for (size_t j = 0; j < case_info.num_args; j++) {
@@ -213,7 +215,7 @@ int main(int argc, char** argv) {
         free(line_buf);
 
         if (read_mode == FAILURE) return EXIT_FAILURE;
-        else print_test_result(test_count, tests_passed, chars_processed, test_info.cipher, test_info.direction);
+        else print_test_result(test_count, tests_passed, chars_in, chars_out, test_info.cipher, test_info.direction);
     }
 
     return EXIT_SUCCESS;
@@ -462,11 +464,13 @@ test_result_t conduct_test(const char* input, const char* output, const enum cip
     return test_result;
 }
 
-void print_test_result(const size_t count, const size_t passed, size_t chars_processed, const enum cipher_e cipher, const enum direction_e direction) {
+void print_test_result(const size_t count, const size_t passed, size_t chars_in, size_t chars_out, const enum cipher_e cipher, const enum direction_e direction) {
     printf("%s ", passed == count ? "PASSED" : "FAILED");
     char cipher_names[NUM_CIPHERS][CIPHER_NAME_LEN] = {
             CIPHER_NAMES_LIST
     };
     printf("%8s %s: ", cipher_names[cipher],   direction == ENCRYPTION ? "encryption" : "decryption");
-    printf("%2zu/%-2zu (%5.1f%%) tests passed, %6zu chars processed\n", passed, count, passed / (float) count * 100, chars_processed);
+    printf("%2zu/%-2zu (%5.1f%%) tests passed, %6zu chars ", passed, count, passed / (float) count * 100, chars_in);
+    printf(direction == ENCRYPTION ? "encrypted" : "decrypted");
+    printf(" into %6zu chars\n", chars_out);
 }
