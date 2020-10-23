@@ -61,7 +61,7 @@ enum cipher_e {
 
 enum direction_e {
     ENCRYPTION = 0,
-    DECRYPTION = 1
+    DECRYPTION __unused = 1
 };
 
 /*
@@ -462,7 +462,6 @@ test_result_t conduct_test(const char* input, const char* output, const enum cip
     test_result.passed = strcmp(output, test_output) == 0;
 
     if (!test_result.passed) {
-        // printf("Failed case with:\n\t>       in = %s\t> true out = %s\t> test out = %s", input, output, test_output);
         printf("FAILED CASE\n");
         printf("in\n--\n");
         printf("%s", input);

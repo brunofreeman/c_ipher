@@ -152,7 +152,7 @@ char* a1z26_decrypt(const char* ciphertext) {
     char c = from_a1z26(buf);
     if (c) {
         plaintext[plaintext_len++] = c;
-        if (c - '0' < 10) {
+        if (c - 'A' < 10) {
             plaintext[plaintext_len++] = buf[1];
         }
     } else {
